@@ -48,11 +48,13 @@ io.on('connection', async (socket) => {
   socket.on('buy_ticket', async (data) => {
     const { productId, quantity = 1 } = data;
     try {
+              // On utilise le vrai nom et le vrai email envoyés par le site
+      const { userName, userEmail } = data;
       const userId = crypto.randomUUID(); 
       await prisma.user.upsert({
         where: { id: userId },
         update: {},
-        create: { id: userId, email: `${userId}@demo.com`, nom: 'Joueur Demo' }
+        create: { id: userId, email: userEmail || 'inconnu@email.com', nom: userName || 'Anonyme' }
       });
 
       let activeRound = await prisma.round.findFirst({ where: { productId: productId, status: 'en_cours' } });
