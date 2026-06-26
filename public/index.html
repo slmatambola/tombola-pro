@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mystery Box Multi-Produits</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body { background-color: #030712; font-family: system-ui, sans-serif; }
+        .progress-glow { box-shadow: 0 0 10px rgba(168, 85, 247, 0.5); transition: width 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .card-hover { transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="text-white min-h-screen">
+
+    <header class="border-b border-gray-800 bg-black/50 backdrop-blur-md p-6 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">MYSTERY BOX</h1>
+            <div class="flex items-center gap-2 text-sm text-gray-400">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Temps réel
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-8 grid grid-cols-1 md:grid-cols-3 gap-8" id="products-container">
+    </main>
+
+    <script>
+        const socket = io();
+        const container = document.getElementById('products-container');
+
+        function renderProducts(products) {
+            container.innerHTML = '';
+            products.forEach(product => {
+                const priceInEuros = product.ticketPrice / 100;
+                const percentage = (product.ticketCount / product.ticketLimit) * 100;
+                
+                container.innerHTML += `
+                    <div class="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden card-hover flex flex-col" id="card-${product.id}">
+                        <img src="${product.imageUrl}" alt="${product.name}" class="w-full h-48 object-cover bg-gray-800">
+                        <div class="p-6 flex-1 flex flex-col">
+                            <h2 class="text-xl font-bold mb-2">${product.name}</h2>
+                            <p class="text-gray-400 text-sm mb-4 flex-1">${product.description}</p>
+                            
+                            <div class="mb-4">
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-400">Tickets vendus</span>
+                                    <span class="font-bold text-purple-400" id="count-${product.id}">${product.ticketCount} / ${product.ticketLimit}</span>
+                                </div>
+                                <div class="w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r from-purple-600 to-pink-500 rounded-full progress-glow" id="bar-${product.id}" style="width: ${percentage}%"></div>
+                                </div>
+                            </div>
+
+                            <button onclick="buyTicket('${product.id}')" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition-colors">
+                                Acheter 1 ticket (${priceInEuros}€)
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function updateProgressBar(productId, ticketCount, ticketLimit) {
+            const percentage = (ticketCount / ticketLimit) * 100;
+            const bar = document.getElementById(`bar-${productId}`);
+            const count = document.getElementById(`count-${productId}`);
+            
+            if (bar && count) {
+                bar.style.width = `${percentage}%`;
+                count.innerText = `${ticketCount} / ${ticketLimit}`;
+            }
+        }
+
+        function buyTicket(productId) {
+            const fakeUserId = 'User_' + Math.random().toString(36).substring(2, 8);
+            socket.emit('buy_ticket', { productId, userId: fakeUserId });
+        }
+
+        socket.on('init_products', (products) => {
+            renderProducts(products);
+            products.forEach(p => socket.emit('join_product', p.id));
+        });
+
+        socket.on('ticket_update', (data) => {
+            // On utilise directement la limite envoyée par le serveur
+            updateProgressBar(data.productId, data.ticketCount, data.ticketLimit);
+        });
+
+        socket.on('new_winner', (data) => {
+            alert(`🏆 ${data.message}`);
+        });
+
+        socket.on('new_round', (data) => {
+            // On remet la barre à 0 en gardant la bonne limite
+            const countText = document.getElementById(`count-${data.productId}`).innerText;
+            const limit = parseInt(countText.split(' / ')[1]);
+            updateProgressBar(data.productId, 0, limit);
+        });
+
+    </script>
+</body>
+</html>

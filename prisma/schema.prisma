@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  nom       String
+  tickets   Ticket[]
+  winners   Winner[]
+  createdAt DateTime  @default(now())
+}
+
+model Product {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  imageUrl     String
+  ticketPrice  Int
+  ticketLimit  Int
+  rounds       Round[]
+  createdAt    DateTime @default(now())
+}
+
+model Round {
+  id        String   @id @default(uuid())
+  status    String   @default("en_cours")
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tickets   Ticket[]
+  winner    Winner?
+  createdAt DateTime @default(now())
+}
+
+model Ticket {
+  id                String  @id @default(uuid())
+  numero_du_ticket  Int
+  userId            String
+  roundId           String
+  user              User    @relation(fields: [userId], references: [id])
+  round             Round   @relation(fields: [roundId], references: [id])
+
+  @@unique([roundId, numero_du_ticket])
+}
+
+model Winner {
+  id        String    @id @default(uuid())
+  userId    String
+  roundId   String    @unique
+  prize     String    @default("À définir")
+  user      User      @relation(fields: [userId], references: [id])
+  round     Round     @relation(fields: [roundId], references: [id])
+  createdAt DateTime  @default(now()) // <--- AJOUTE CETTE LIGNE !
+}
