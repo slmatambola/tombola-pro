@@ -11,6 +11,7 @@ model User {
   id        String    @id @default(uuid())
   email     String    @unique
   nom       String
+  telephone String    // <--- AJOUTE CETTE LIGNE
   tickets   Ticket[]
   winners   Winner[]
   createdAt DateTime  @default(now())
